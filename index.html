@@ -2,81 +2,97 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>App Xem Video 360 Tàu Lượn</title>
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
     <style>
-        /* Nút kích hoạt cảm biến cho iOS */
+        body { margin: 0; overflow: hidden; background-color: #000; }
+        
+        /* Giao diện nút bấm kích hoạt cảm biến rõ ràng */
         #permission-btn {
             position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
             z-index: 9999;
-            padding: 15px 30px;
-            background-color: #24292e;
+            padding: 18px 32px;
+            background-color: #007bff;
             color: white;
-            border: 2px solid #fff;
-            border-radius: 6px;
-            font-size: 16px;
+            border: none;
+            border-radius: 30px;
+            font-size: 18px;
             font-weight: bold;
             cursor: pointer;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            box-shadow: 0 8px 24px rgba(0,123,255,0.4);
             display: none;
+            transition: all 0.3s;
         }
+        #permission-btn:active { transform: translate(-50%, -50%) scale(0.95); }
     </style>
 </head>
 <body>
 
-    <button id="permission-btn">Kích hoạt cảm biến chuyển động</button>
+    <button id="permission-btn">BẤM ĐỂ XEM VIDEO 360°</button>
 
-    <a-scene>
-        <a-assets>
+    <a-scene vr-mode-ui="enabled: false">
+        <a-assets timeout="10000">
             <video id="video360" 
-                   src="tau-luon.mp4" 
+                   src="tàu lượn.mp4" 
                    autoplay 
                    loop 
                    muted 
                    playsinline 
-                   webkit-playsinline>
+                   webkit-playsinline
+                   crossorigin="anonymous">
             </video>
         </a-assets>
 
         <a-videosphere src="#video360" rotation="0 -90 0"></a-videosphere>
 
-        <a-entity camera look-controls></a-entity>
+        <a-entity camera look-controls="magicWindowTrackingEnabled: true; touchEnabled: true"></a-entity>
     </a-scene>
 
     <script>
         const video = document.getElementById('video360');
         const btn = document.getElementById('permission-btn');
 
-        // Tự động phát video ngay khi load xong dữ liệu
-        video.addEventListener('loadeddata', () => {
-            video.play().catch(err => {
-                console.log("Chờ tương tác để phát video...");
-            });
-        });
+        // Hàm ép video phải phát
+        function forcePlayVideo() {
+            video.play();
+            // Bỏ "muted" sau khi tương tác nếu muốn nghe thấy tiếng loa (nếu video có tiếng)
+            video.muted = false; 
+        }
 
-        // Cấp quyền cảm biến cho iPhone (iOS)
+        // Kiểm tra cơ chế xin quyền cảm biến (Dành riêng cho iPhone/iOS)
         if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+            // Hiện nút để người dùng tương tác (iOS bắt buộc kích hoạt bằng tay từ người dùng)
             btn.style.display = 'block';
+
             btn.addEventListener('click', () => {
                 DeviceOrientationEvent.requestPermission()
                     .then(permissionState => {
                         if (permissionState === 'granted') {
                             btn.style.display = 'none';
-                            video.play();
+                            forcePlayVideo();
                         } else {
-                            alert('Bạn cần cho phép quyền cảm biến để xoay điện thoại xem video!');
+                            alert('Bạn đã từ chối quyền cảm biến. Không thể xoay góc nhìn 360 độ!');
+                            btn.style.display = 'none';
+                            forcePlayVideo(); // Vẫn phát video nhưng chỉ vuốt tay được thôi
                         }
                     })
                     .catch(console.error);
             });
         } else {
-            // Đối với Android/PC, chạm bất kỳ đâu để kích hoạt phát video kèm âm thanh nếu muốn
+            // Đối với Android và Máy tính, không cần nút bấm phức tạp
+            // Chỉ cần người dùng chạm tay vào màn hình bất kỳ là tự động kích hoạt mượt mà
             window.addEventListener('click', () => {
-                video.play();
+                forcePlayVideo();
+            });
+            // Thử tự động chạy ngay nếu trình duyệt Android cho phép công khai
+            document.addEventListener('DOMContentLoaded', () => {
+                video.play().catch(() => {
+                    console.log("Cần chạm màn hình một lần để kích hoạt video.");
+                });
             });
         }
     </script>
